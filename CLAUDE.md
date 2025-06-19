@@ -18,7 +18,7 @@ This is a static web application with no build process. Development requires ser
 
 ```bash
 # Using Python (most common)
-python -m http.server 3000
+python3 -m http.server 3000
 
 # Using Node.js
 npx http-server -p 3000
@@ -79,6 +79,8 @@ The app implements a popup-first authentication strategy with redirect fallback:
 - Popup blocked → Automatic redirect fallback
 - Silent token acquisition failure → Interactive popup fallback
 - Graph API errors → User-friendly error display
+- Multiple authentication attempts → Interaction state management prevents overlapping requests
+- Nested popup context → Automatic redirect usage when in popup/iframe
 
 **Security Features:**
 - Tokens stored in sessionStorage (configurable to localStorage)

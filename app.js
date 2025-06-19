@@ -49,6 +49,7 @@ const errorInfo = document.getElementById('error-info');
 // Global variables
 let currentAccount = null;
 let accessToken = null;
+let isAuthenticationInProgress = false;
 
 // Initialize the application
 async function initializeApp() {
@@ -64,6 +65,7 @@ async function initializeApp() {
             const accounts = msalInstance.getAllAccounts();
             if (accounts.length > 0) {
                 currentAccount = accounts[0];
+                showWelcomeNotification();
                 showSignedInState();
                 await loadUserProfile();
             }
@@ -83,11 +85,30 @@ function handleAuthResponse(response) {
         showSignedInState();
         loadUserProfile();
     }
+    // Reset authentication flag
+    isAuthenticationInProgress = false;
 }
 
 // Sign in function
 async function signIn() {
     try {
+        // Check if authentication is already in progress
+        if (isAuthenticationInProgress) {
+            console.log('Authentication already in progress, ignoring request');
+            return;
+        }
+        
+        // Check if user is already signed in
+        const accounts = msalInstance.getAllAccounts();
+        if (accounts.length > 0) {
+            console.log('User already signed in');
+            currentAccount = accounts[0];
+            showSignedInState();
+            await loadUserProfile();
+            return;
+        }
+        
+        isAuthenticationInProgress = true;
         hideError();
         
         // Check if we need to handle popup or redirect
@@ -100,12 +121,21 @@ async function signIn() {
             // Fallback to redirect if popup fails
             try {
                 await msalInstance.loginRedirect(loginRequest);
+                // Don't reset flag here as redirect will reload the page
+                return;
             } catch (redirectError) {
                 console.error('Redirect sign in failed:', redirectError);
                 showError('Sign in failed: ' + redirectError.message);
             }
+        } else if (error.errorCode === 'interaction_in_progress') {
+            showError('Please wait for the current sign-in process to complete.');
         } else {
             showError('Sign in failed: ' + error.message);
+        }
+    } finally {
+        // Reset flag only if not using redirect (redirect reloads the page)
+        if (!error || error.errorCode !== 'popup_window_error') {
+            isAuthenticationInProgress = false;
         }
     }
 }
@@ -113,6 +143,13 @@ async function signIn() {
 // Sign out function
 async function signOut() {
     try {
+        // Check if authentication is already in progress
+        if (isAuthenticationInProgress) {
+            console.log('Authentication in progress, cannot sign out now');
+            showError('Please wait for the current authentication process to complete before signing out.');
+            return;
+        }
+        
         hideError();
         
         const logoutRequest = {
@@ -120,25 +157,26 @@ async function signOut() {
             postLogoutRedirectUri: window.location.origin
         };
         
-        await msalInstance.logoutPopup(logoutRequest);
-        currentAccount = null;
-        accessToken = null;
-        showSignedOutState();
+        // Check if we're in a popup context or if popups are blocked
+        if (window.opener || window.location !== window.parent.location) {
+            // We're in a popup or iframe, use redirect
+            await msalInstance.logoutRedirect(logoutRequest);
+        } else {
+            // Try popup first, fallback to redirect
+            try {
+                await msalInstance.logoutPopup(logoutRequest);
+                currentAccount = null;
+                accessToken = null;
+                isAuthenticationInProgress = false;
+                showSignedOutState();
+            } catch (popupError) {
+                console.warn('Popup logout failed, falling back to redirect:', popupError);
+                await msalInstance.logoutRedirect(logoutRequest);
+            }
+        }
     } catch (error) {
         console.error('Sign out failed:', error);
-        
-        // Fallback to redirect logout
-        const logoutRequest = {
-            account: currentAccount,
-            postLogoutRedirectUri: window.location.origin
-        };
-        
-        try {
-            await msalInstance.logoutRedirect(logoutRequest);
-        } catch (redirectError) {
-            console.error('Redirect sign out failed:', redirectError);
-            showError('Sign out failed: ' + redirectError.message);
-        }
+        showError('Sign out failed: ' + error.message);
     }
 }
 
