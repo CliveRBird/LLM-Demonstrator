@@ -10,8 +10,6 @@
 <body>
     <div class="container">
         <header>
-            <h1>TRUSTB Commercial Service LLM Demonstrator</h1>
-            <p>Sign in with your work or school Microsoft 365 account</p>
         </header>
 
         <main>
@@ -25,7 +23,7 @@
             
             <div id="auth-section">
                 <div id="sign-in-section" class="auth-card">
-                    <h2>Sign In</h2>
+                    <h2>TRUSTB Commercial Service LLM Demonstrator Sign In</h2>
                     <p>Click the button below to sign in with your Microsoft 365 work or school account.</p>
                     <div class="button-group">
                         <button id="sign-in-btn" class="auth-button">
@@ -53,6 +51,7 @@
                     <div class="button-group">
                         <button id="get-token-btn" class="secondary-button">Get Access Token</button>
                         <button id="call-graph-btn" class="secondary-button">Call Microsoft Graph</button>
+                        <button id="chat-openai-btn" class="secondary-button">Chat with TRUSTB Contract Mentor</button>
                         <button id="sign-out-btn" class="auth-button">Sign Out</button>
                     </div>
                 </div>
@@ -69,6 +68,25 @@
                 <h3>Microsoft Graph API Response</h3>
                 <div id="graph-info">
                     <pre id="graph-response"></pre>
+                </div>
+            </div>
+
+            <div id="chat-section" class="info-card" style="display: none;">
+                <h3>TRUSTB Contract Writer</h3>
+                <div id="chat-container">
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <div class="chat-input-wrapper">
+                            <textarea id="chat-input" class="chat-input" placeholder="Type your message here..." rows="2"></textarea>
+                            <button id="send-message-btn" class="send-button">
+                                <span>Send</span>
+                            </button>
+                        </div>
+                        <div class="chat-controls">
+                            <button id="clear-chat-btn" class="secondary-button">Clear Chat</button>
+                            <button id="close-chat-btn" class="secondary-button">Close Chat</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -91,6 +109,7 @@
                         <li>Set Redirect URI: "Single-page application (SPA)" → "http://localhost:3000" (or your domain)</li>
                         <li>Copy the Application (client) ID and update the clientId in app.js</li>
                         <li>Optionally, add API permissions for Microsoft Graph</li>
+                        <li><strong>For AI Chat:</strong> Get an OpenAI API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a> and update OPENAI_API_KEY in app.js</li>
                     </ol>
                 </div>
             </div>

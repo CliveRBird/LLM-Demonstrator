@@ -10,6 +10,7 @@ This is a client-side Microsoft 365 authentication web application demonstrating
 - MSAL.js 2.38.1 (Microsoft Authentication Library)
 - Vanilla JavaScript (no frameworks)
 - Microsoft Graph API
+- OpenAI GPT-3.5-turbo integration
 - Pure HTML/CSS/JS implementation
 
 ## Development Commands
@@ -55,6 +56,12 @@ The app implements a popup-first authentication strategy with redirect fallback:
 - User photo loading (`/me/photo/$value` endpoint)
 - Access token display and API response formatting
 
+**OpenAI Chat Integration** (`app.js:324-483`):
+- GPT-3.5-turbo conversational AI
+- User context integration from Microsoft 365 profile
+- Real-time chat interface with typing indicators
+- Chat history management and token optimization
+
 ### File Structure
 ```
 ├── index.html          # Main UI with authentication sections
@@ -65,7 +72,9 @@ The app implements a popup-first authentication strategy with redirect fallback:
 
 ## Configuration Requirements
 
-**Critical Setup Step:** Replace `"YOUR_CLIENT_ID_HERE"` in `app.js:6` with actual Azure AD application client ID.
+**Critical Setup Steps:** 
+1. Replace `"YOUR_CLIENT_ID_HERE"` in `app.js:6` with actual Azure AD application client ID
+2. Replace `"YOUR_OPENAI_API_KEY_HERE"` in `app.js:64` with actual OpenAI API key for chat functionality
 
 **Azure AD App Registration Requirements:**
 - Application type: Single-page application (SPA)

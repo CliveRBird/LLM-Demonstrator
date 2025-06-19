@@ -31,10 +31,12 @@ const signOutBtn = document.getElementById('sign-out-btn');
 const signOutInitialBtn = document.getElementById('sign-out-initial-btn');
 const getTokenBtn = document.getElementById('get-token-btn');
 const callGraphBtn = document.getElementById('call-graph-btn');
+const chatOpenAIBtn = document.getElementById('chat-openai-btn');
 const signInSection = document.getElementById('sign-in-section');
 const signedInSection = document.getElementById('signed-in-section');
 const tokenSection = document.getElementById('token-section');
 const graphSection = document.getElementById('graph-section');
+const chatSection = document.getElementById('chat-section');
 const errorSection = document.getElementById('error-section');
 
 // User info elements
@@ -46,10 +48,24 @@ const accessTokenDisplay = document.getElementById('access-token');
 const graphResponse = document.getElementById('graph-response');
 const errorInfo = document.getElementById('error-info');
 
+// Chat elements
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const sendMessageBtn = document.getElementById('send-message-btn');
+const clearChatBtn = document.getElementById('clear-chat-btn');
+const closeChatBtn = document.getElementById('close-chat-btn');
+
 // Global variables
 let currentAccount = null;
 let accessToken = null;
 let isAuthenticationInProgress = false;
+
+// OpenAI Configuration
+const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE'; // Replace with your OpenAI API key
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+
+// Chat state
+let chatHistory = [];
 
 // Initialize the application
 async function initializeApp() {
@@ -305,6 +321,276 @@ function displayGraphResponse(data) {
     graphSection.style.display = 'block';
 }
 
+// Open chat interface
+function openChat() {
+    try {
+        hideError();
+        
+        // Check if OpenAI API key is configured
+        if (OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY_HERE') {
+            showError('OpenAI API key not configured. Please update the OPENAI_API_KEY in app.js');
+            return;
+        }
+        
+        chatSection.style.display = 'block';
+        
+        // Add welcome message if chat is empty
+        if (chatHistory.length === 0) {
+            addChatMessage('assistant', `Hello ${currentAccount?.name || 'there'}! I'm your TRUSTB contract mentor. How can I help you today?`);
+        }
+        
+        // Focus on chat input
+        chatInput.focus();
+    } catch (error) {
+        console.error('Failed to open chat:', error);
+        showError('Failed to open chat: ' + error.message);
+    }
+}
+
+// Send message to OpenAI
+async function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+    
+    let typingId;
+    
+    try {
+        // Add user message to chat
+        addChatMessage('user', message);
+        chatInput.value = '';
+        
+        // Show typing indicator
+        typingId = addTypingIndicator();
+        
+        // Add user message to history
+        chatHistory.push({ role: 'user', content: message });
+        
+        // Add system prompt for contract writing
+        const systemMessage = {
+            role: 'system',
+            content: `Draft a UK contract template, in JSON format, that has 'Definition of Requirement' section for services within UK jurisdiction.`
+        };
+        
+        // Prepare messages for OpenAI
+        const messages = [systemMessage, ...chatHistory];
+        
+        // Call OpenAI API
+        const response = await fetch(OPENAI_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: messages,
+                max_tokens: 1000,
+                temperature: 0.7
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('OpenAI response:', data);
+        
+        // Check if response has the expected structure
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            throw new Error('Invalid response structure from OpenAI API');
+        }
+        
+        const aiResponse = data.choices[0].message.content;
+        
+        // Remove typing indicator
+        removeTypingIndicator(typingId);
+        
+        // Add AI response to chat and history
+        addChatMessage('assistant', aiResponse);
+        chatHistory.push({ role: 'assistant', content: aiResponse });
+        
+        // Limit chat history to last 10 exchanges to manage token usage
+        if (chatHistory.length > 20) {
+            chatHistory = chatHistory.slice(-20);
+        }
+        
+    } catch (error) {
+        console.error('Failed to send message:', error);
+        console.error('Error details:', error);
+        
+        // Always remove typing indicator on error
+        if (typingId) {
+            removeTypingIndicator(typingId);
+        }
+        
+        // Show user-friendly error message
+        const errorMessage = error.message.includes('API') 
+            ? 'Sorry, I encountered an issue connecting to the AI service. Please check your API key and try again.'
+            : 'Sorry, I encountered an error while processing your message. Please try again.';
+            
+        addChatMessage('assistant', errorMessage);
+        showError('Chat error: ' + error.message);
+    }
+}
+
+// Add message to chat interface
+function addChatMessage(role, content) {
+    console.log(`Adding ${role} message:`, content);
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role}-message`;
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = role === 'user' ? (currentAccount?.name?.charAt(0) || 'U') : 'AI';
+    
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    
+    // Check if content is JSON and format it
+    if (role === 'assistant' && isJsonString(content)) {
+        try {
+            const jsonData = JSON.parse(content);
+            messageContent.appendChild(createJsonDisplay(jsonData));
+        } catch (e) {
+            messageContent.textContent = content || 'No content received';
+        }
+    } else {
+        messageContent.textContent = content || 'No content received';
+    }
+    
+    const messageTime = document.createElement('div');
+    messageTime.className = 'message-time';
+    messageTime.textContent = new Date().toLocaleTimeString();
+    
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(messageContent);
+    messageDiv.appendChild(messageTime);
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Check if string is valid JSON
+function isJsonString(str) {
+    try {
+        JSON.parse(str);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Create structured display for JSON contract data
+function createJsonDisplay(jsonData) {
+    const container = document.createElement('div');
+    container.className = 'json-contract-display';
+    
+    // Add a title
+    const title = document.createElement('h4');
+    title.textContent = 'Contract Template';
+    title.className = 'contract-title';
+    container.appendChild(title);
+    
+    // Create the structured display
+    const contractDiv = createContractSection(jsonData);
+    container.appendChild(contractDiv);
+    
+    // Add copy button
+    const copyButton = document.createElement('button');
+    copyButton.textContent = 'Copy JSON';
+    copyButton.className = 'copy-json-btn';
+    copyButton.onclick = () => {
+        navigator.clipboard.writeText(JSON.stringify(jsonData, null, 2));
+        copyButton.textContent = 'Copied!';
+        setTimeout(() => copyButton.textContent = 'Copy JSON', 2000);
+    };
+    container.appendChild(copyButton);
+    
+    return container;
+}
+
+// Create structured contract sections
+function createContractSection(data, level = 0) {
+    const section = document.createElement('div');
+    section.className = `contract-section level-${level}`;
+    
+    for (const [key, value] of Object.entries(data)) {
+        const item = document.createElement('div');
+        item.className = 'contract-item';
+        
+        const label = document.createElement('div');
+        label.className = 'contract-label';
+        label.textContent = formatLabel(key);
+        item.appendChild(label);
+        
+        const valueDiv = document.createElement('div');
+        valueDiv.className = 'contract-value';
+        
+        if (typeof value === 'object' && value !== null) {
+            valueDiv.appendChild(createContractSection(value, level + 1));
+        } else {
+            valueDiv.textContent = value;
+        }
+        
+        item.appendChild(valueDiv);
+        section.appendChild(item);
+    }
+    
+    return section;
+}
+
+// Format labels to be more readable
+function formatLabel(key) {
+    return key.replace(/([A-Z])/g, ' $1')
+              .replace(/^./, str => str.toUpperCase())
+              .trim();
+}
+
+// Add typing indicator
+function addTypingIndicator() {
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-message assistant-message typing-indicator';
+    typingDiv.id = 'typing-indicator';
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = 'AI';
+    
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    messageContent.innerHTML = '<span class="typing-dots">●●●</span>';
+    
+    typingDiv.appendChild(avatar);
+    typingDiv.appendChild(messageContent);
+    
+    chatMessages.appendChild(typingDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return 'typing-indicator';
+}
+
+// Remove typing indicator
+function removeTypingIndicator(id) {
+    const indicator = document.getElementById(id);
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+// Clear chat
+function clearChat() {
+    chatMessages.innerHTML = '';
+    chatHistory = [];
+    addChatMessage('assistant', `Hello ${currentAccount?.name || 'there'}! I'm your AI assistant. How can I help you today?`);
+}
+
+// Close chat
+function closeChat() {
+    chatSection.style.display = 'none';
+}
+
 // Show welcome notification
 function showWelcomeNotification() {
     console.log('Showing welcome notification');
@@ -388,6 +674,20 @@ signOutBtn.addEventListener('click', signOut);
 signOutInitialBtn.addEventListener('click', signOut);
 getTokenBtn.addEventListener('click', getAccessToken);
 callGraphBtn.addEventListener('click', callMicrosoftGraph);
+chatOpenAIBtn.addEventListener('click', openChat);
+
+// Chat event listeners
+sendMessageBtn.addEventListener('click', sendMessage);
+clearChatBtn.addEventListener('click', clearChat);
+closeChatBtn.addEventListener('click', closeChat);
+
+// Allow Enter key to send messages
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
 
 // Initialize the app when the page loads
 document.addEventListener('DOMContentLoaded', initializeApp);
