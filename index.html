@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRUSTB Commercial Service LLM Demonstrator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="shortcut icon" href="https://c.s-microsoft.com/favicon.ico?v2">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TRUSTB Commercial Service LLM Demonstrator</h1>
+            <p>Sign in with your work or school Microsoft 365 account</p>
+        </header>
+
+        <main>
+            <div id="welcome-notification" class="notification success" style="display: none;">
+                <div class="notification-content">
+                    <span class="notification-icon">✓</span>
+                    <span class="notification-text">Welcome! You have successfully signed in.</span>
+                    <button class="notification-close" onclick="hideWelcomeNotification()">&times;</button>
+                </div>
+            </div>
+            
+            <div id="auth-section">
+                <div id="sign-in-section" class="auth-card">
+                    <h2>Sign In</h2>
+                    <p>Click the button below to sign in with your Microsoft 365 work or school account.</p>
+                    <div class="button-group">
+                        <button id="sign-in-btn" class="auth-button">
+                            <img src="https://docs.microsoft.com/en-us/azure/active-directory/develop/media/howto-add-branding-in-azure-ad-apps/ms-symbollockup_mssymbol_19.png" alt="Microsoft Logo" class="ms-logo">
+                            Sign in with Microsoft 365
+                        </button>
+                        <button id="sign-out-initial-btn" class="secondary-button">
+                            Sign Out
+                        </button>
+                    </div>
+                </div>
+
+                <div id="signed-in-section" class="auth-card" style="display: none;">
+                    <h2>Welcome!</h2>
+                    <div id="user-info">
+                        <div class="user-profile">
+                            <img id="user-photo" src="" alt="User Photo" style="display: none;">
+                            <div class="user-details">
+                                <h3 id="user-name"></h3>
+                                <p id="user-email"></p>
+                                <p id="user-org"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button id="get-token-btn" class="secondary-button">Get Access Token</button>
+                        <button id="call-graph-btn" class="secondary-button">Call Microsoft Graph</button>
+                        <button id="sign-out-btn" class="auth-button">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="token-section" class="info-card" style="display: none;">
+                <h3>Access Token</h3>
+                <div id="token-info">
+                    <textarea id="access-token" readonly rows="10" cols="80"></textarea>
+                </div>
+            </div>
+
+            <div id="graph-section" class="info-card" style="display: none;">
+                <h3>Microsoft Graph API Response</h3>
+                <div id="graph-info">
+                    <pre id="graph-response"></pre>
+                </div>
+            </div>
+
+            <div id="error-section" class="error-card" style="display: none;">
+                <h3>Error</h3>
+                <div id="error-info"></div>
+            </div>
+        </main>
+
+        <footer>
+            <div class="setup-info">
+                <h3>Setup Instructions</h3>
+                <p>To use this demo, you need to register an application in Azure AD. See <a href="#setup" onclick="toggleSetup()">setup instructions</a>.</p>
+                <div id="setup-details" style="display: none;">
+                    <ol>
+                        <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank">Azure AD App Registrations</a></li>
+                        <li>Click "New registration"</li>
+                        <li>Set Name: "Microsoft 365 Auth Demo"</li>
+                        <li>Set Supported account types: "Accounts in any organizational directory"</li>
+                        <li>Set Redirect URI: "Single-page application (SPA)" → "http://localhost:3000" (or your domain)</li>
+                        <li>Copy the Application (client) ID and update the clientId in app.js</li>
+                        <li>Optionally, add API permissions for Microsoft Graph</li>
+                    </ol>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
